@@ -1,4 +1,6 @@
+// Твой персональный и рабочий URL
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZefOM6K3TzjPq0n2m8_Z6lcPKngEIgLMAQWt61OFEtUc9FQWa9MyMjRGaYxaO-WZY/exec";
+
 const departments = ["ג 3", "א", "ב 1", "ב 2", "ג 1", "ג 2", "ד"];
 
 let currentDeptIndex = 0;
@@ -23,7 +25,7 @@ function startCheck() {
 
 function updateDeptUI() {
     document.getElementById('progress-text').innerText = `מחלקה ${currentDeptIndex + 1} מתוך ${departments.length}`;
-    document.getElementById('current-dept-name').innerText = departments[currentDeptIndex];
+    document.getElementById('current-dept-name').innerText = "מחלקה: " + departments[currentDeptIndex];
     document.getElementById('temp-dining').value = "";
     document.getElementById('temp-rooms').value = "";
     document.getElementById('notes').value = "";
@@ -52,8 +54,12 @@ async function saveAndNext() {
 
     sessionData.push(record);
     
-    // Отправка данных в Google Таблицу
-    fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(record) });
+    // Отправка данных на твой сервер (Google Sheets & Telegram)
+    fetch(SCRIPT_URL, { 
+        method: "POST", 
+        mode: "no-cors", 
+        body: JSON.stringify(record) 
+    }).catch(err => console.error("Ошибка сети:", err));
 
     if (currentDeptIndex < departments.length - 1) {
         currentDeptIndex++;
@@ -64,7 +70,6 @@ async function saveAndNext() {
 }
 
 function showFinalReport() {
-    localStorage.setItem('hospital_history', JSON.stringify(sessionData));
     document.getElementById('check-section').classList.add('hidden');
     document.getElementById('report-section').classList.remove('hidden');
     renderChart(sessionData);
@@ -89,12 +94,5 @@ function exportToExcel() {
     const ws = XLSX.utils.json_to_sheet(sessionData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "דוח");
-    XLSX.writeFile(wb, "Report.xlsx");
-}
-
-function autoGenerate() {
-    const history = JSON.parse(localStorage.getItem('hospital_history') || "[]");
-    if (history.length < 7) return alert("אין נתונים קודמים");
-    sessionData = history.slice(-7).map(d => ({...d, date: new Date().toLocaleDateString('he-IL'), time: "אוטומטי"}));
-    renderChart(sessionData);
+    XLSX.writeFile(wb, `Report_${new Date().toLocaleDateString('he-IL')}.xlsx`);
 }
