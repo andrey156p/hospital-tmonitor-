@@ -54,12 +54,15 @@ async function saveAndNext() {
 
     sessionData.push(record);
     
-    // Отправка данных на твой сервер (Google Sheets & Telegram)
+    // Отправка данных на твой сервер (Обновленный обход CORS)
     fetch(SCRIPT_URL, { 
         method: "POST", 
-        mode: "no-cors", 
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
         body: JSON.stringify(record) 
-    }).catch(err => console.error("Ошибка сети:", err));
+    }).then(response => console.log("Отправлено в Google!"))
+      .catch(err => alert("Ошибка отправки: " + err));
 
     if (currentDeptIndex < departments.length - 1) {
         currentDeptIndex++;
