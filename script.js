@@ -51,7 +51,7 @@ async function saveAndNext() {
     // Расчет средней температуры палат
     const tRoomsAvg = Math.round(((tRoom1 + tRoom2) / 2) * 10) / 10;
 
-    let status = (tDining >= 24 || tRoomsAvg >= 24) ? "🔴 חם מאוד" : (tDining <= 22 || tRoomsAvg <= 22) ? "🔵 קר" : "✅ תקין";
+   let status = (tDining > 24 || tRoomsAvg > 24) ? "🔴 חם מאוד" : (tDining <= 22 || tRoomsAvg <= 22) ? "🔵 קר" : "✅ תקין";
 
     const record = {
         date: new Date().toLocaleDateString('he-IL'),
