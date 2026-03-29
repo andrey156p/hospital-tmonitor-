@@ -8,20 +8,32 @@ let pendingDepts = [];
 let completedDepts = [];
 let myChart = null;
 
+// ЗАЩИТА ПАМЯТИ (Если старая память ломает код, скрипт её удалит и спасет работу)
 window.onload = () => {
-    const savedSession = localStorage.getItem('tempMonitorSession');
-    if (savedSession) {
-        const data = JSON.parse(savedSession);
-        inspector = data.inspector;
-        currentShift = data.currentShift;
-        pendingDepts = data.pendingDepts;
-        completedDepts = data.completedDepts;
-        sessionData = data.sessionData || [];
-        
-        applyTheme();
-        document.getElementById('setup-section').classList.add('hidden');
-        document.getElementById('check-section').classList.remove('hidden');
-        updateDeptUI();
+    try {
+        const savedSession = localStorage.getItem('tempMonitorSession');
+        if (savedSession) {
+            const data = JSON.parse(savedSession);
+            
+            if (!data.pendingDepts || data.pendingDepts.length === 0) {
+                 localStorage.removeItem('tempMonitorSession');
+                 return;
+            }
+            
+            inspector = data.inspector || "";
+            currentShift = data.currentShift || "";
+            pendingDepts = data.pendingDepts;
+            completedDepts = data.completedDepts || [];
+            sessionData = data.sessionData || [];
+            
+            applyTheme();
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('check-section').classList.remove('hidden');
+            updateDeptUI();
+        }
+    } catch (error) {
+        console.error("Критическая ошибка памяти, сброс:", error);
+        localStorage.removeItem('tempMonitorSession');
     }
 };
 
@@ -60,48 +72,56 @@ function saveToLocalStorage() {
     localStorage.setItem('tempMonitorSession', JSON.stringify(data));
 }
 
+// НОВОЕ СООБЩЕНИЕ ОБ ОТМЕНЕ С ПРЕДУПРЕЖДЕНИЕМ
 function cancelSession() {
-    if(confirm("האם אתה בטוח שברצונך לבטל את הבדיקה ולהתחיל מחדש? (Отменить проверку?)")) {
+    const msg = "האם אתה בטוח שברצונך לבטל את הבדיקה?\n\n(Вы уверены, что хотите отменить проверку? Текущие данные будут сброшены.)";
+    if(confirm(msg)) {
         localStorage.removeItem('tempMonitorSession');
         location.reload();
     }
 }
 
 function updateDeptUI() {
-    document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
-    
-    const select = document.getElementById('dept-select');
-    select.innerHTML = "";
-    pendingDepts.forEach(dept => {
-        let opt = document.createElement('option');
-        opt.value = dept;
-        opt.innerHTML = "מחלקה " + dept;
-        select.appendChild(opt);
-    });
-
-    const compContainer = document.getElementById('completed-depts-container');
-    const compList = document.getElementById('completed-list');
-    compList.innerHTML = "";
-    
-    if (completedDepts.length > 0) {
-        compContainer.style.display = "block";
-        completedDepts.forEach(dept => {
-            let li = document.createElement('li');
-            li.innerHTML = `✅ מחלקה ${dept}`;
-            compList.appendChild(li);
+    try {
+        document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
+        
+        const select = document.getElementById('dept-select');
+        select.innerHTML = "";
+        pendingDepts.forEach(dept => {
+            let opt = document.createElement('option');
+            opt.value = dept;
+            opt.innerHTML = "מחלקה " + dept;
+            select.appendChild(opt);
         });
-    } else {
-        compContainer.style.display = "none";
-    }
 
-    document.getElementById('temp-dining').value = "";
-    document.getElementById('temp-room1').value = "";
-    document.getElementById('temp-room2').value = "";
-    document.getElementById('notes').value = "";
+        const compContainer = document.getElementById('completed-depts-container');
+        const compList = document.getElementById('completed-list');
+        compList.innerHTML = "";
+        
+        if (completedDepts.length > 0) {
+            compContainer.style.display = "block";
+            completedDepts.forEach(dept => {
+                let li = document.createElement('li');
+                li.innerHTML = `✅ מחלקה ${dept}`;
+                compList.appendChild(li);
+            });
+        } else {
+            compContainer.style.display = "none";
+        }
+
+        document.getElementById('temp-dining').value = "";
+        document.getElementById('temp-room1').value = "";
+        document.getElementById('temp-room2').value = "";
+        document.getElementById('notes').value = "";
+    } catch (error) {
+        console.error("Ошибка обновления интерфейса:", error);
+    }
 }
 
 async function saveAndNext() {
-    const selectedDept = document.getElementById('dept-select').value;
+    const selectEl = document.getElementById('dept-select');
+    if (!selectEl) return;
+    const selectedDept = selectEl.value;
     if (!selectedDept) return;
 
     const tDining = parseFloat(document.getElementById('temp-dining').value);
