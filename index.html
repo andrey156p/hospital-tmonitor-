@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>מערכת ניטור טמפרטורה</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,7 +36,11 @@
         <div id="check-section" class="hidden">
             <div class="card">
                 <div class="progress-bar"><span id="progress-text"></span></div>
-                <h2 id="current-dept-name"></h2>
+                
+                <div class="input-group">
+                    <label style="color: #1a73e8; font-size: 1.1em;">בחר מחלקה (Выберите отделение):</label>
+                    <select id="dept-select"></select>
+                </div>
                 
                 <div class="input-group">
                     <label>1. חדר אוכל (Столовая):</label>
@@ -57,6 +63,12 @@
                 </div>
                 
                 <button class="main-btn" onclick="saveAndNext()">שמור והמשך</button>
+                <button class="reset-btn" style="background: #ffebee; color: #c62828; margin-top: 15px;" onclick="cancelSession()">ביטול בדיקה (Сбросить)</button>
+
+                <div id="completed-depts-container" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; display: none;">
+                    <h4 style="margin: 0 0 10px 0; color: #34a853;">✅ מחלקות שנבדקו:</h4>
+                    <ul id="completed-list" style="list-style: none; padding: 0; margin: 0; line-height: 1.8;"></ul>
+                </div>
             </div>
         </div>
 
@@ -67,7 +79,7 @@
                     <canvas id="tempChart"></canvas>
                 </div>
                 <button class="export-btn" onclick="exportToExcel()">הורד דוח אקסל</button>
-                <button class="reset-btn" onclick="location.reload()">בדיקה חדשה</button>
+                <button class="reset-btn" onclick="cancelSession()">בדיקה חדשה</button>
             </div>
         </div>
     </div>
