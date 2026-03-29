@@ -6,25 +6,35 @@ let inspector = "";
 let currentShift = "";
 let pendingDepts = [];
 let completedDepts = [];
+let outsideTemp = "N/A"; // Переменная для погоды снаружи
 let myChart = null;
 
-// ЗАЩИТА ПАМЯТИ (Если старая память ломает код, скрипт её удалит и спасет работу)
+// ФУНКЦИЯ ДЛЯ ЗАГРУЗКИ ПОГОДЫ (Бат-Ям / Центр)
+async function fetchWeather() {
+    try {
+        const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=32.0167&longitude=34.75&current_weather=true");
+        const data = await response.json();
+        outsideTemp = data.current_weather.temperature;
+    } catch (error) {
+        console.error("Ошибка получения погоды:", error);
+    }
+}
+
 window.onload = () => {
     try {
         const savedSession = localStorage.getItem('tempMonitorSession');
         if (savedSession) {
             const data = JSON.parse(savedSession);
-            
             if (!data.pendingDepts || data.pendingDepts.length === 0) {
                  localStorage.removeItem('tempMonitorSession');
                  return;
             }
-            
             inspector = data.inspector || "";
             currentShift = data.currentShift || "";
             pendingDepts = data.pendingDepts;
             completedDepts = data.completedDepts || [];
             sessionData = data.sessionData || [];
+            outsideTemp = data.outsideTemp || "N/A"; // Восстанавливаем погоду при перезагрузке
             
             applyTheme();
             document.getElementById('setup-section').classList.add('hidden');
@@ -32,7 +42,7 @@ window.onload = () => {
             updateDeptUI();
         }
     } catch (error) {
-        console.error("Критическая ошибка памяти, сброс:", error);
+        console.error("Ошибка памяти, сброс:", error);
         localStorage.removeItem('tempMonitorSession');
     }
 };
@@ -53,6 +63,8 @@ function startCheck() {
     completedDepts = [];
     sessionData = [];
     
+    fetchWeather(); // Запускаем загрузку погоды
+    
     saveToLocalStorage();
     applyTheme();
 
@@ -67,12 +79,12 @@ function saveToLocalStorage() {
         currentShift: currentShift,
         pendingDepts: pendingDepts,
         completedDepts: completedDepts,
-        sessionData: sessionData
+        sessionData: sessionData,
+        outsideTemp: outsideTemp // Сохраняем погоду в память
     };
     localStorage.setItem('tempMonitorSession', JSON.stringify(data));
 }
 
-// НОВОЕ СООБЩЕНИЕ ОБ ОТМЕНЕ С ПРЕДУПРЕЖДЕНИЕМ
 function cancelSession() {
     const msg = "האם אתה בטוח שברצונך לבטל את הבדיקה?\n\n(Вы уверены, что хотите отменить проверку? Текущие данные будут сброшены.)";
     if(confirm(msg)) {
@@ -114,7 +126,7 @@ function updateDeptUI() {
         document.getElementById('temp-room2').value = "";
         document.getElementById('notes').value = "";
     } catch (error) {
-        console.error("Ошибка обновления интерфейса:", error);
+        console.error("Ошибка обновления UI:", error);
     }
 }
 
@@ -148,6 +160,7 @@ async function saveAndNext() {
     
     let status = (issues.length > 0) ? issues.join(" | ") : "✅ תקין";
 
+    // ГОТОВИМ ДАННЫЕ ДЛЯ ОТПРАВКИ
     const record = {
         date: new Date().toLocaleDateString('he-IL'),
         shift: currentShift,
@@ -156,6 +169,7 @@ async function saveAndNext() {
         dept: selectedDept,
         dining_temp: tDining,
         rooms_temp: tRoomsAvg,
+        outside_temp: outsideTemp, // <-- ДОБАВЛЯЕМ УЛИЧНУЮ ТЕМПЕРАТУРУ
         notes: note,
         status: status
     };
