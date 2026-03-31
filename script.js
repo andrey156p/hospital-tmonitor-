@@ -6,188 +6,147 @@ let inspector = "";
 let currentShift = "";
 let pendingDepts = [];
 let completedDepts = [];
-let outsideTemp = "N/A"; 
+let outsideTemp = "N/A";
 let myChart = null;
 
-// ПОЛУЧАЕМ ПОГОДУ (Бат-Ям / Центр)
 async function fetchWeather() {
     try {
         const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=32.0167&longitude=34.75&current_weather=true");
         const data = await response.json();
         outsideTemp = data.current_weather.temperature;
-    } catch (error) {
-        console.error("Ошибка погоды:", error);
-    }
+    } catch (e) { outsideTemp = "N/A"; }
 }
 
 window.onload = () => {
-    try {
-        const savedSession = localStorage.getItem('tempMonitorSession');
-        if (savedSession) {
-            const data = JSON.parse(savedSession);
-            if (!data.pendingDepts || data.pendingDepts.length === 0) {
-                 localStorage.removeItem('tempMonitorSession');
-                 return;
-            }
-            inspector = data.inspector || "";
-            currentShift = data.currentShift || "";
-            pendingDepts = data.pendingDepts;
-            completedDepts = data.completedDepts || [];
-            sessionData = data.sessionData || [];
-            outsideTemp = data.outsideTemp || "N/A"; 
-            
-            applyTheme();
+    const saved = localStorage.getItem('tempMonitorSession');
+    if (saved) {
+        const data = JSON.parse(saved);
+        inspector = data.inspector;
+        currentShift = data.currentShift;
+        pendingDepts = data.pendingDepts || [];
+        completedDepts = data.completedDepts || [];
+        sessionData = data.sessionData || [];
+        outsideTemp = data.outsideTemp || "N/A";
+        
+        if (pendingDepts.length === 0 && completedDepts.length > 0) {
+            showFinalReport();
+        } else {
             document.getElementById('setup-section').classList.add('hidden');
             document.getElementById('check-section').classList.remove('hidden');
+            applyTheme();
             updateDeptUI();
         }
-    } catch (error) {
-        localStorage.removeItem('tempMonitorSession');
     }
 };
-
-function applyTheme() {
-    const container = document.getElementById('app-container');
-    container.classList.remove('theme-morning', 'theme-noon', 'theme-evening');
-    container.classList.add(currentShift === "בוקר" ? 'theme-morning' : currentShift === "צהריים" ? 'theme-noon' : 'theme-evening');
-}
 
 function startCheck() {
     inspector = document.getElementById('inspector-name').value;
     currentShift = document.getElementById('shift-select').value;
-    
     if (!inspector) return alert("נא להזין שם בודק");
     
     pendingDepts = [...ALL_DEPTS];
     completedDepts = [];
     sessionData = [];
-    
-    fetchWeather(); // Запускаем градусник на улице
-    
+    fetchWeather();
     saveToLocalStorage();
     applyTheme();
-
     document.getElementById('setup-section').classList.add('hidden');
     document.getElementById('check-section').classList.remove('hidden');
     updateDeptUI();
 }
 
 function saveToLocalStorage() {
-    const data = {
-        inspector: inspector,
-        currentShift: currentShift,
-        pendingDepts: pendingDepts,
-        completedDepts: completedDepts,
-        sessionData: sessionData,
-        outsideTemp: outsideTemp 
-    };
-    localStorage.setItem('tempMonitorSession', JSON.stringify(data));
+    localStorage.setItem('tempMonitorSession', JSON.stringify({
+        inspector, currentShift, pendingDepts, completedDepts, sessionData, outsideTemp
+    }));
 }
 
-function cancelSession() {
-    const msg = "האם אתה בטוח שברצונך לבטל את הבדיקה?\n\n(Вы уверены, что хотите отменить проверку?)";
-    if(confirm(msg)) {
-        localStorage.removeItem('tempMonitorSession');
-        location.reload();
-    }
+function applyTheme() {
+    const s = document.getElementById('app-container').classList;
+    s.remove('theme-morning', 'theme-noon', 'theme-evening');
+    s.add(currentShift === "בוקר" ? 'theme-morning' : currentShift === "צהריים" ? 'theme-noon' : 'theme-evening');
 }
 
 function updateDeptUI() {
-    try {
-        document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
-        
-        const select = document.getElementById('dept-select');
-        select.innerHTML = "";
-        pendingDepts.forEach(dept => {
-            let opt = document.createElement('option');
-            opt.value = dept;
-            opt.innerHTML = "מחלקה " + dept;
-            select.appendChild(opt);
+    document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
+    const sel = document.getElementById('dept-select');
+    sel.innerHTML = "";
+    pendingDepts.forEach(d => {
+        let o = document.createElement('option');
+        o.value = d; o.innerText = "מחלקה " + d;
+        sel.appendChild(o);
+    });
+
+    const list = document.getElementById('completed-list');
+    list.innerHTML = "";
+    if (completedDepts.length > 0) {
+        document.getElementById('completed-depts-container').style.display = "block";
+        completedDepts.forEach(d => {
+            let li = document.createElement('li');
+            li.innerText = `✅ מחלקה ${d} (נשמר בטבלה)`;
+            list.appendChild(li);
         });
-
-        const compContainer = document.getElementById('completed-depts-container');
-        const compList = document.getElementById('completed-list');
-        compList.innerHTML = "";
-        
-        if (completedDepts.length > 0) {
-            compContainer.style.display = "block";
-            completedDepts.forEach(dept => {
-                let li = document.createElement('li');
-                li.innerHTML = `✅ מחלקה ${dept}`;
-                compList.appendChild(li);
-            });
-        } else {
-            compContainer.style.display = "none";
-        }
-
-        document.getElementById('temp-dining').value = "";
-        document.getElementById('temp-room1').value = "";
-        document.getElementById('temp-room2').value = "";
-        document.getElementById('notes').value = "";
-    } catch (error) {}
+    } else {
+        document.getElementById('completed-depts-container').style.display = "none";
+    }
 }
 
 async function saveAndNext() {
-    const selectEl = document.getElementById('dept-select');
-    if (!selectEl) return;
-    const selectedDept = selectEl.value;
-    if (!selectedDept) return;
+    const dept = document.getElementById('dept-select').value;
+    const tD = parseFloat(document.getElementById('temp-dining').value);
+    const tR1 = parseFloat(document.getElementById('temp-room1').value);
+    const tR2 = parseFloat(document.getElementById('temp-room2').value);
+    const notes = document.getElementById('notes').value;
 
-    const tDining = parseFloat(document.getElementById('temp-dining').value);
-    const tRoom1 = parseFloat(document.getElementById('temp-room1').value);
-    const tRoom2 = parseFloat(document.getElementById('temp-room2').value);
-    const note = document.getElementById('notes').value;
-
-    if (isNaN(tDining) || isNaN(tRoom1) || isNaN(tRoom2)) {
-        return alert("חובה למלא את כל הטמפרטורות!");
-    }
-
-    if (tDining < 17 || tDining > 30 || tRoom1 < 17 || tRoom1 > 30 || tRoom2 < 17 || tRoom2 > 30) {
-        return alert("שגיאה: הטמפרטורה חייבת להיות בין 17 ל-30 מעלות!");
-    }
-
-    const tRoomsAvg = Math.round(((tRoom1 + tRoom2) / 2) * 10) / 10;
+    if (isNaN(tD) || isNaN(tR1) || isNaN(tR2)) return alert("חובה למלא את כל הטמפרטורות!");
     
+    // Блокируем кнопку, чтобы не нажали дважды
+    const btn = document.querySelector('.main-btn');
+    const originalText = btn.innerText;
+    btn.innerText = "שומר נתונים... (Сохранение...)";
+    btn.disabled = true;
+
+    const avgR = Math.round(((tR1 + tR2) / 2) * 10) / 10;
     let issues = [];
-    if (tDining > 24) issues.push("🔴 חדר אוכל: חם");
-    else if (tDining < 22) issues.push("🔵 חדר אוכל: קר");
-    
-    if (tRoomsAvg > 24) issues.push("🔴 חדרים: חם");
-    else if (tRoomsAvg < 22) issues.push("🔵 חדרים: קר");
-    
-    let status = (issues.length > 0) ? issues.join(" | ") : "✅ תקין";
+    if (tD > 24) issues.push("🔴 חדר אוכל: חם"); else if (tD < 22) issues.push("🔵 חדר אוכל: קר");
+    if (avgR > 24) issues.push("🔴 חדרים: חם"); else if (avgR < 22) issues.push("🔵 חדרים: קר");
+    let status = issues.length > 0 ? issues.join(" | ") : "✅ תקין";
 
     const record = {
         date: new Date().toLocaleDateString('he-IL'),
         shift: currentShift,
-        time: new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'}),
-        inspector: inspector,
-        dept: selectedDept,
-        dining_temp: tDining,
-        rooms_temp: tRoomsAvg,
-        outside_temp: outsideTemp, // УЛИЧНАЯ ПОГОДА ЛЕТИТ В КОЛОНКУ J
-        notes: note,
-        status: status
+        time: new Date().toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}),
+        inspector, dept, dining_temp: tD, rooms_temp: avgR, notes, status, outside_temp: outsideTemp
     };
 
-    sessionData.push(record);
-    
-    pendingDepts = pendingDepts.filter(d => d !== selectedDept);
-    completedDepts.push(selectedDept);
-    
-    saveToLocalStorage();
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: 'no-cors', // Важно для Apps Script
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(record)
+        });
 
-    fetch(SCRIPT_URL, { 
-        method: "POST", 
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(record) 
-    }).catch(err => console.error("Ошибка сети:", err));
+        // Поскольку стоит no-cors, мы не можем прочитать SUCCESS, 
+        // но если fetch не выкинул ошибку — значит данные ушли в сеть.
+        
+        sessionData.push(record);
+        pendingDepts = pendingDepts.filter(d => d !== dept);
+        completedDepts.push(dept);
+        saveToLocalStorage();
 
-    if (pendingDepts.length > 0) {
-        updateDeptUI();
-    } else {
-        localStorage.removeItem('tempMonitorSession');
-        showFinalReport();
+        if (pendingDepts.length > 0) {
+            updateDeptUI();
+        } else {
+            // АВТОЗАВЕРШЕНИЕ
+            localStorage.removeItem('tempMonitorSession');
+            showFinalReport();
+        }
+    } catch (e) {
+        alert("שגיאת תקשורת! הנתונים לא נשמרו. נסה שוב. (Ошибка сети!)");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 }
 
@@ -195,6 +154,13 @@ function showFinalReport() {
     document.getElementById('check-section').classList.add('hidden');
     document.getElementById('report-section').classList.remove('hidden');
     renderChart(sessionData);
+}
+
+function cancelSession() {
+    if(confirm("לבטל הכל ולהתחיל מחדש?")) {
+        localStorage.removeItem('tempMonitorSession');
+        location.reload();
+    }
 }
 
 function renderChart(data) {
@@ -206,7 +172,7 @@ function renderChart(data) {
             labels: data.map(d => d.dept),
             datasets: [
                 { label: 'אוכל', data: data.map(d => d.dining_temp), borderColor: '#1a73e8' },
-                { label: 'חדרים, ממוצע', data: data.map(d => d.rooms_temp), borderColor: '#f44336' }
+                { label: 'חדרים', data: data.map(d => d.rooms_temp), borderColor: '#f44336' }
             ]
         }
     });
