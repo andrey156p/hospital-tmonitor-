@@ -83,27 +83,33 @@ function updateDeptUI() {
         document.getElementById('completed-depts-container').style.display = "block";
         completedDepts.forEach(d => {
             let li = document.createElement('li');
-            li.innerText = `✅ מחלקה ${d} (נשמר בטבלה)`;
+            li.innerText = `✅ מחלקה ${d} (נרשם)`;
             list.appendChild(li);
         });
     } else {
         document.getElementById('completed-depts-container').style.display = "none";
     }
+
+    // ОЧИСТКА ПОЛЕЙ ПРИ КАЖДОМ ОБНОВЛЕНИИ ИНТЕРФЕЙСА
+    document.getElementById('temp-dining').value = "";
+    document.getElementById('temp-room1').value = "";
+    document.getElementById('temp-room2').value = "";
+    document.getElementById('notes').value = "";
 }
 
 async function saveAndNext() {
-    const dept = document.getElementById('dept-select').value;
+    const deptSelect = document.getElementById('dept-select');
+    const dept = deptSelect.value;
     const tD = parseFloat(document.getElementById('temp-dining').value);
     const tR1 = parseFloat(document.getElementById('temp-room1').value);
     const tR2 = parseFloat(document.getElementById('temp-room2').value);
     const notes = document.getElementById('notes').value;
 
+    if (!dept) return alert("בחר מחלקה");
     if (isNaN(tD) || isNaN(tR1) || isNaN(tR2)) return alert("חובה למלא את כל הטמפרטורות!");
     
-    // Блокируем кнопку, чтобы не нажали дважды
     const btn = document.querySelector('.main-btn');
-    const originalText = btn.innerText;
-    btn.innerText = "שומר נתונים... (Сохранение...)";
+    btn.innerText = "...שומר נתונים";
     btn.disabled = true;
 
     const avgR = Math.round(((tR1 + tR2) / 2) * 10) / 10;
@@ -120,32 +126,30 @@ async function saveAndNext() {
     };
 
     try {
-        const response = await fetch(SCRIPT_URL, {
+        await fetch(SCRIPT_URL, {
             method: "POST",
-            mode: 'no-cors', // Важно для Apps Script
+            mode: 'no-cors',
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(record)
         });
 
-        // Поскольку стоит no-cors, мы не можем прочитать SUCCESS, 
-        // но если fetch не выкинул ошибку — значит данные ушли в сеть.
-        
+        // Если выполнение дошло сюда без ошибки сети:
         sessionData.push(record);
         pendingDepts = pendingDepts.filter(d => d !== dept);
         completedDepts.push(dept);
         saveToLocalStorage();
 
         if (pendingDepts.length > 0) {
+            // АВТОМАТИЧЕСКИЙ ПЕРЕХОД: Обновляем интерфейс и чистим поля
             updateDeptUI();
         } else {
-            // АВТОЗАВЕРШЕНИЕ
             localStorage.removeItem('tempMonitorSession');
             showFinalReport();
         }
     } catch (e) {
-        alert("שגיאת תקשורת! הנתונים לא נשמרו. נסה שוב. (Ошибка сети!)");
+        alert("שגיאת תקשורת! הנתונים לא נשמרו.");
     } finally {
-        btn.innerText = originalText;
+        btn.innerText = "שמור והמשך";
         btn.disabled = false;
     }
 }
