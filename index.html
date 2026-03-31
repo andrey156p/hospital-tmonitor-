@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>מערכת ניטור טמפרטורה</title>
-    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
-
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,7 +20,6 @@
             <div class="card">
                 <label>שם הבודק:</label>
                 <input type="text" id="inspector-name" placeholder="הכנס שם מלא">
-                
                 <label>בחר משמרת:</label>
                 <select id="shift-select">
                     <option value="בוקר">בוקר (Утро)</option>
@@ -36,35 +33,28 @@
         <div id="check-section" class="hidden">
             <div class="card">
                 <div class="progress-bar"><span id="progress-text"></span></div>
-                
                 <div class="input-group">
-                    <label style="color: #1a73e8; font-size: 1.1em;">בחר מחלקה (Выберите отделение):</label>
+                    <label style="color: #1a73e8; font-size: 1.1em;">בחר מחלקה:</label>
                     <select id="dept-select"></select>
                 </div>
-                
                 <div class="input-group">
-                    <label>1. חדר אוכל (Столовая):</label>
-                    <input type="number" id="temp-dining" step="0.1" inputmode="decimal" min="17" max="30">
+                    <label>1. חדר אוכל:</label>
+                    <input type="number" id="temp-dining" step="0.1" inputmode="decimal">
                 </div>
-                
                 <div class="input-group">
-                    <label>2. חדר רגיל 1 (Палата 1):</label>
-                    <input type="number" id="temp-room1" step="0.1" inputmode="decimal" min="17" max="30">
+                    <label>2. חדר רגיל 1:</label>
+                    <input type="number" id="temp-room1" step="0.1" inputmode="decimal">
                 </div>
-
                 <div class="input-group">
-                    <label>3. חדר רגיל 2 (Палата 2):</label>
-                    <input type="number" id="temp-room2" step="0.1" inputmode="decimal" min="17" max="30">
+                    <label>3. חדר רגיל 2:</label>
+                    <input type="number" id="temp-room2" step="0.1" inputmode="decimal">
                 </div>
-                
                 <div class="input-group">
-                    <label>הערות (Заметки):</label>
+                    <label>הערות:</label>
                     <textarea id="notes" rows="2"></textarea>
                 </div>
-                
                 <button class="main-btn" onclick="saveAndNext()">שמור והמשך</button>
-                <button class="reset-btn" style="background: #ffebee; color: #c62828; margin-top: 15px;" onclick="cancelSession()">ביטול בדיקה (Сбросить)</button>
-
+                
                 <div id="completed-depts-container" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; display: none;">
                     <h4 style="margin: 0 0 10px 0; color: #34a853;">✅ מחלקות שנבדקו:</h4>
                     <ul id="completed-list" style="list-style: none; padding: 0; margin: 0; line-height: 1.8;"></ul>
@@ -79,7 +69,7 @@
                     <canvas id="tempChart"></canvas>
                 </div>
                 <button class="export-btn" onclick="exportToExcel()">הורד דוח אקסל</button>
-                <button class="reset-btn" onclick="cancelSession()">בדיקה חדשה</button>
+                <button class="reset-btn" onclick="location.reload()">בדיקה חדשה</button>
             </div>
         </div>
     </div>

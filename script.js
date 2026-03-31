@@ -68,7 +68,16 @@ function applyTheme() {
 }
 
 function updateDeptUI() {
+    // 1. Очищаем все поля ввода
+    document.getElementById('temp-dining').value = "";
+    document.getElementById('temp-room1').value = "";
+    document.getElementById('temp-room2').value = "";
+    document.getElementById('notes').value = "";
+
+    // 2. Обновляем прогресс
     document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
+    
+    // 3. Обновляем список выбора отделений
     const sel = document.getElementById('dept-select');
     sel.innerHTML = "";
     pendingDepts.forEach(d => {
@@ -77,6 +86,7 @@ function updateDeptUI() {
         sel.appendChild(o);
     });
 
+    // 4. Обновляем список завершенных
     const list = document.getElementById('completed-list');
     list.innerHTML = "";
     if (completedDepts.length > 0) {
@@ -89,12 +99,6 @@ function updateDeptUI() {
     } else {
         document.getElementById('completed-depts-container').style.display = "none";
     }
-
-    // ОЧИСТКА ПОЛЕЙ ПРИ КАЖДОМ ОБНОВЛЕНИИ ИНТЕРФЕЙСА
-    document.getElementById('temp-dining').value = "";
-    document.getElementById('temp-room1').value = "";
-    document.getElementById('temp-room2').value = "";
-    document.getElementById('notes').value = "";
 }
 
 async function saveAndNext() {
@@ -133,15 +137,13 @@ async function saveAndNext() {
             body: JSON.stringify(record)
         });
 
-        // Если выполнение дошло сюда без ошибки сети:
         sessionData.push(record);
         pendingDepts = pendingDepts.filter(d => d !== dept);
         completedDepts.push(dept);
         saveToLocalStorage();
 
         if (pendingDepts.length > 0) {
-            // АВТОМАТИЧЕСКИЙ ПЕРЕХОД: Обновляем интерфейс и чистим поля
-            updateDeptUI();
+            updateDeptUI(); // Здесь произойдет очистка полей и смена отделения
         } else {
             localStorage.removeItem('tempMonitorSession');
             showFinalReport();
@@ -158,13 +160,6 @@ function showFinalReport() {
     document.getElementById('check-section').classList.add('hidden');
     document.getElementById('report-section').classList.remove('hidden');
     renderChart(sessionData);
-}
-
-function cancelSession() {
-    if(confirm("לבטל הכל ולהתחיל מחדש?")) {
-        localStorage.removeItem('tempMonitorSession');
-        location.reload();
-    }
 }
 
 function renderChart(data) {
