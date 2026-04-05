@@ -9,6 +9,9 @@ let completedDepts = [];
 let outsideTemp = "N/A";
 let myChart = null;
 
+// 🛡️ ПЕРЕМЕННАЯ ДЛЯ БЛОКИРОВКИ ДВОЙНЫХ НАЖАТИЙ
+let isSaving = false;
+
 async function fetchWeather() {
     try {
         const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=32.0167&longitude=34.75&current_weather=true");
@@ -68,16 +71,14 @@ function applyTheme() {
 }
 
 function updateDeptUI() {
-    // 1. Очищаем все поля ввода
+    // Мгновенная очистка полей
     document.getElementById('temp-dining').value = "";
     document.getElementById('temp-room1').value = "";
     document.getElementById('temp-room2').value = "";
     document.getElementById('notes').value = "";
 
-    // 2. Обновляем прогресс
     document.getElementById('progress-text').innerText = `נבדקו ${completedDepts.length} מתוך ${ALL_DEPTS.length}`;
     
-    // 3. Обновляем список выбора отделений
     const sel = document.getElementById('dept-select');
     sel.innerHTML = "";
     pendingDepts.forEach(d => {
@@ -86,7 +87,6 @@ function updateDeptUI() {
         sel.appendChild(o);
     });
 
-    // 4. Обновляем список завершенных
     const list = document.getElementById('completed-list');
     list.innerHTML = "";
     if (completedDepts.length > 0) {
@@ -102,6 +102,9 @@ function updateDeptUI() {
 }
 
 async function saveAndNext() {
+    // 🛡️ ЕСЛИ УЖЕ ИДЕТ СОХРАНЕНИЕ - БЛОКИРУЕМ ПОВТОРНЫЙ ЗАПУСК
+    if (isSaving) return;
+
     const deptSelect = document.getElementById('dept-select');
     const dept = deptSelect.value;
     const tD = parseFloat(document.getElementById('temp-dining').value);
@@ -112,6 +115,8 @@ async function saveAndNext() {
     if (!dept) return alert("בחר מחלקה");
     if (isNaN(tD) || isNaN(tR1) || isNaN(tR2)) return alert("חובה למלא את כל הטמפרטורות!");
     
+    // ВКЛЮЧАЕМ БЛОКИРОВКУ КНОПКИ
+    isSaving = true;
     const btn = document.querySelector('.main-btn');
     btn.innerText = "...שומר נתונים";
     btn.disabled = true;
@@ -143,7 +148,7 @@ async function saveAndNext() {
         saveToLocalStorage();
 
         if (pendingDepts.length > 0) {
-            updateDeptUI(); // Здесь произойдет очистка полей и смена отделения
+            updateDeptUI();
         } else {
             localStorage.removeItem('tempMonitorSession');
             showFinalReport();
@@ -151,6 +156,8 @@ async function saveAndNext() {
     } catch (e) {
         alert("שגיאת תקשורת! הנתונים לא נשמרו.");
     } finally {
+        // ОТКЛЮЧАЕМ БЛОКИРОВКУ, КОГДА ВСЁ ЗАКОНЧИЛОСЬ
+        isSaving = false;
         btn.innerText = "שמור והמשך";
         btn.disabled = false;
     }
