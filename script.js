@@ -9,15 +9,18 @@ let completedDepts = [];
 let outsideTemp = "N/A";
 let myChart = null;
 
-// 🛡️ ПЕРЕМЕННАЯ ДЛЯ БЛОКИРОВКИ ДВОЙНЫХ НАЖАТИЙ
 let isSaving = false;
 
 async function fetchWeather() {
     try {
         const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=32.0167&longitude=34.75&current_weather=true");
+        if (!response.ok) throw new Error("Network response was not ok");
         const data = await response.json();
         outsideTemp = data.current_weather.temperature;
-    } catch (e) { outsideTemp = "N/A"; }
+    } catch (e) { 
+        console.log("Weather fetch error", e);
+        outsideTemp = "N/A"; 
+    }
 }
 
 window.onload = () => {
@@ -31,6 +34,10 @@ window.onload = () => {
         sessionData = data.sessionData || [];
         outsideTemp = data.outsideTemp || "N/A";
         
+        if (outsideTemp === "N/A") {
+            fetchWeather().then(() => saveToLocalStorage());
+        }
+        
         if (pendingDepts.length === 0 && completedDepts.length > 0) {
             showFinalReport();
         } else {
@@ -42,17 +49,28 @@ window.onload = () => {
     }
 };
 
-function startCheck() {
+async function startCheck() {
     inspector = document.getElementById('inspector-name').value;
     currentShift = document.getElementById('shift-select').value;
     if (!inspector) return alert("נא להזין שם בודק");
     
+    const btn = document.querySelector('#setup-section .main-btn');
+    const originalText = btn.innerText;
+    btn.innerText = "טוען נתונים... (Загрузка)";
+    btn.disabled = true;
+
     pendingDepts = [...ALL_DEPTS];
     completedDepts = [];
     sessionData = [];
-    fetchWeather();
+    
+    await fetchWeather();
+    
     saveToLocalStorage();
     applyTheme();
+    
+    btn.innerText = originalText;
+    btn.disabled = false;
+
     document.getElementById('setup-section').classList.add('hidden');
     document.getElementById('check-section').classList.remove('hidden');
     updateDeptUI();
@@ -71,7 +89,6 @@ function applyTheme() {
 }
 
 function updateDeptUI() {
-    // Мгновенная очистка полей
     document.getElementById('temp-dining').value = "";
     document.getElementById('temp-room1').value = "";
     document.getElementById('temp-room2').value = "";
@@ -102,7 +119,6 @@ function updateDeptUI() {
 }
 
 async function saveAndNext() {
-    // 🛡️ ЕСЛИ УЖЕ ИДЕТ СОХРАНЕНИЕ - БЛОКИРУЕМ ПОВТОРНЫЙ ЗАПУСК
     if (isSaving) return;
 
     const deptSelect = document.getElementById('dept-select');
@@ -115,17 +131,24 @@ async function saveAndNext() {
     if (!dept) return alert("בחר מחלקה");
     if (isNaN(tD) || isNaN(tR1) || isNaN(tR2)) return alert("חובה למלא את כל הטמפרטורות!");
     
-    // ВКЛЮЧАЕМ БЛОКИРОВКУ КНОПКИ
     isSaving = true;
-    const btn = document.querySelector('.main-btn');
+    const btn = document.querySelector('#check-section .main-btn');
+    const originalText = btn.innerText;
     btn.innerText = "...שומר נתונים";
     btn.disabled = true;
 
     const avgR = Math.round(((tR1 + tR2) / 2) * 10) / 10;
     let issues = [];
-    if (tD > 24) issues.push("🔴 חדר אוכל: חם"); else if (tD < 22) issues.push("🔵 חדר אוכל: קר");
-    if (avgR > 24) issues.push("🔴 חדרים: חם"); else if (avgR < 22) issues.push("🔵 חדרים: קר");
+    
+    // НОВЫЕ ГРАНИЦЫ: 24.6 и 21.4
+    if (tD > 24.6) issues.push("🔴 חדר אוכל: חם"); else if (tD < 21.4) issues.push("🔵 חדר אוכל: קר");
+    if (avgR > 24.6) issues.push("🔴 חדרים: חם"); else if (avgR < 21.4) issues.push("🔵 חדרים: קר");
+    
     let status = issues.length > 0 ? issues.join(" | ") : "✅ תקין";
+
+    if (outsideTemp === "N/A") {
+        await fetchWeather();
+    }
 
     const record = {
         date: new Date().toLocaleDateString('he-IL'),
@@ -156,9 +179,8 @@ async function saveAndNext() {
     } catch (e) {
         alert("שגיאת תקשורת! הנתונים לא נשמרו.");
     } finally {
-        // ОТКЛЮЧАЕМ БЛОКИРОВКУ, КОГДА ВСЁ ЗАКОНЧИЛОСЬ
         isSaving = false;
-        btn.innerText = "שמור והמשך";
+        btn.innerText = originalText;
         btn.disabled = false;
     }
 }
